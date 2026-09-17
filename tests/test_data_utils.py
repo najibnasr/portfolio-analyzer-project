@@ -109,3 +109,45 @@ def test_correlation_single_asset(prices):
     r = compute_returns(prices[["AAA"]])
     with pytest.raises(ValueError):
         compute_correlation(r)
+
+
+# --- download_prices with a mocked yfinance (no network) ---
+
+def _fake_multi(tickers, start=None, end=None, **kwargs):
+    """Fake yf.download for several tickers (MultiIndex columns)."""
+    idx = pd.date_range("2026-01-01", periods=3)
+    cols = pd.MultiIndex.from_product([["Close"], ["AAA", "BBB"]])
+    return pd.DataFrame(
+        [[100.0, 50.0], [110.0, 52.0], [105.0, 51.0]], index=idx, columns=cols
+    )
+
+
+def _fake_single(tickers, start=None, end=None, **kwargs):
+    """Fake yf.download for a single ticker (flat columns -> Series)."""
+    idx = pd.date_range("2026-01-01", periods=3)
+    return pd.DataFrame({"Close": [100.0, 110.0, 105.0]}, index=idx)
+
+
+def _fake_empty(tickers, start=None, end=None, **kwargs):
+    return pd.DataFrame({"Close": []})
+
+
+def test_download_prices_multi_tickers(monkeypatch):
+    monkeypatch.setattr("src.data_utils.yf.download", _fake_multi)
+    prices = download_prices(["AAA", "BBB"], "2026-01-01", "2026-01-04")
+    assert list(prices.columns) == ["AAA", "BBB"]
+    assert len(prices) == 3
+    assert prices.loc["2026-01-02", "AAA"] == pytest.approx(110.0)
+
+
+def test_download_prices_single_ticker(monkeypatch):
+    monkeypatch.setattr("src.data_utils.yf.download", _fake_single)
+    prices = download_prices(["AAA"], "2026-01-01", "2026-01-04")
+    assert list(prices.columns) == ["AAA"]  # Series converted to DataFrame
+    assert len(prices) == 3
+
+
+def test_download_prices_no_data(monkeypatch):
+    monkeypatch.setattr("src.data_utils.yf.download", _fake_empty)
+    with pytest.raises(ValueError):
+        download_prices(["AAA"], "2026-01-01", "2026-01-04")
