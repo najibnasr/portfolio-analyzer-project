@@ -14,17 +14,26 @@ from src.data_utils import (
     compute_correlation,
 )
 
-st.set_page_config(page_title="Portfolio Analyzer", page_icon="📈", layout="wide")
-st.title("📈 Portfolio Analyzer")
+st.set_page_config(page_title="Portfolio Analyzer", layout="wide")
+st.title("Portfolio Analyzer")
 st.write("Compare stocks: cumulative returns, volatility, drawdown and correlations.")
 
 # --- Sidebar: user inputs ---
 st.sidebar.header("Settings")
 
-tickers_input = st.sidebar.text_input(
-    "Tickers (comma-separated)", value="AAPL, MSFT, GOOGL"
+TICKER_CHOICES = [
+    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "NFLX",
+    "JPM", "GS", "V", "KO", "MCD", "DIS",
+    "MC.PA", "AIR.PA", "OR.PA", "TTE.PA", "BNP.PA", "SAN.PA",
+]
+
+tickers = st.sidebar.multiselect(
+    "Tickers (pick from the list or type your own)",
+    options=TICKER_CHOICES,
+    default=["AAPL", "MSFT", "GOOGL"],
+    accept_new_options=True,
 )
-tickers = [t.strip().upper() for t in tickers_input.split(",") if t.strip()]
+tickers = [t.strip().upper() for t in tickers if t.strip()]
 
 today = dt.date.today()
 start_date, end_date = st.sidebar.slider(
@@ -49,7 +58,7 @@ def load_prices(tickers, start, end):
 
 
 if not tickers:
-    st.warning("Enter at least one ticker in the sidebar.")
+    st.warning("Select at least one ticker in the sidebar.")
     st.stop()
 
 try:
